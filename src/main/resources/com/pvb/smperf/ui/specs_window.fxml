@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane prefHeight="560.0" prefWidth="900.0" styleClass="win-window" stylesheets="@specs_style.css" xmlns="http://javafx.com/javafx/21.0.6" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.pvb.smperf.ui.SpecsWindowController">
+    <center>
+        <HBox spacing="8">
+            <padding>
+                <Insets bottom="6" left="10" right="10" top="10" />
+            </padding>
+
+            <!-- LEFT COLUMN -->
+            <VBox maxWidth="340" minWidth="310" prefWidth="330" spacing="6">
+
+                <!-- System group -->
+                <StackPane>
+                    <VBox maxHeight="Infinity" maxWidth="Infinity" spacing="6" styleClass="group-box">
+                        <StackPane.margin>
+                            <Insets top="8" />
+                        </StackPane.margin>
+                        <Label fx:id="modelLbl" styleClass="model-text" text="Detecting..." wrapText="true" />
+                        <Separator />
+                        <GridPane hgap="10" vgap="4">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="84" prefWidth="84" />
+                                <ColumnConstraints hgrow="ALWAYS" minWidth="10" />
+                            </columnConstraints>
+
+                            <Label styleClass="key" text="Cores" GridPane.rowIndex="0" />
+                            <Label fx:id="coresLbl" styleClass="val" text="-" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                            <Label styleClass="key" text="Threads" GridPane.rowIndex="1" />
+                            <Label fx:id="threadsLbl" styleClass="val" text="-" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                            <Label styleClass="key" text="SMT" GridPane.rowIndex="2" />
+                            <Label fx:id="smtLbl" styleClass="val" text="-" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                            <Label styleClass="key" text="Packages" GridPane.rowIndex="3" />
+                            <Label fx:id="pkgLbl" styleClass="val" text="-" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                            <Label styleClass="key" text="Memory" GridPane.rowIndex="4" />
+                            <Label fx:id="ramLbl" styleClass="val" text="-" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+
+                            <Label styleClass="key" text="Max clock" GridPane.rowIndex="5" />
+                            <Label fx:id="clockLbl" styleClass="val" text="-" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+
+                            <Label styleClass="key" text="Last-level cache" wrapText="true" GridPane.rowIndex="6" />
+                            <Label fx:id="llcLbl" styleClass="val" text="-" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                        </GridPane>
+                    </VBox>
+                    <Label styleClass="group-title" text="System" StackPane.alignment="TOP_LEFT">
+                        <StackPane.margin>
+                            <Insets left="10" />
+                        </StackPane.margin>
+                    </Label>
+                </StackPane>
+
+                <!-- Cache group -->
+                <StackPane VBox.vgrow="ALWAYS">
+                    <VBox maxHeight="Infinity" maxWidth="Infinity" styleClass="group-box">
+                        <StackPane.margin>
+                            <Insets top="8" />
+                        </StackPane.margin>
+                        <TableView fx:id="cacheTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colCacheName" prefWidth="90.0" text="Cache" />
+                                <TableColumn fx:id="colCacheSize" prefWidth="70.0" styleClass="num" text="Size" />
+                                <TableColumn fx:id="colCacheCount" prefWidth="45.0" styleClass="num" text="Qty" />
+                                <TableColumn fx:id="colCacheShared" prefWidth="85.0" text="Shared by" />
+                            </columns>
+                        </TableView>
+                    </VBox>
+                    <Label styleClass="group-title" text="Cache hierarchy" StackPane.alignment="TOP_LEFT">
+                        <StackPane.margin>
+                            <Insets left="10" />
+                        </StackPane.margin>
+                    </Label>
+                </StackPane>
+            </VBox>
+
+            <!-- RIGHT COLUMN -->
+            <StackPane HBox.hgrow="ALWAYS">
+                <VBox maxHeight="Infinity" maxWidth="Infinity" spacing="6" styleClass="group-box">
+                    <StackPane.margin>
+                        <Insets top="8" />
+                    </StackPane.margin>
+                    <TableView fx:id="cpuTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="colCpuId" minWidth="40" prefWidth="48.0" styleClass="num" text="CPU" />
+                            <TableColumn fx:id="colCpuPhys" minWidth="40" prefWidth="48.0" styleClass="num" text="Core" />
+                            <TableColumn fx:id="colCpuPkg" minWidth="36" prefWidth="42.0" styleClass="num" text="Pkg" />
+                            <TableColumn fx:id="colCpuCoreId" minWidth="56" prefWidth="62.0" styleClass="num" text="Core ID" />
+                            <TableColumn fx:id="colCpuType" minWidth="90" prefWidth="100.0" text="Type" />
+                            <TableColumn fx:id="colCpuFreq" minWidth="80" prefWidth="92.0" styleClass="num" text="Max clock" />
+                            <TableColumn fx:id="colCpuSiblings" minWidth="70" prefWidth="80.0" text="Siblings" />
+                        </columns>
+                    </TableView>
+                    <Label styleClass="note" text="Rows with the same shading are hardware threads of one physical core." wrapText="true" />
+                </VBox>
+                <Label styleClass="group-title" text="Logical processors" StackPane.alignment="TOP_LEFT">
+                    <StackPane.margin>
+                        <Insets left="10" />
+                    </StackPane.margin>
+                </Label>
+            </StackPane>
+        </HBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="8">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="4" />
+            </padding>
+            <Label fx:id="statusLbl" maxWidth="Infinity" styleClass="status-panel" text="Ready" HBox.hgrow="ALWAYS" />
+            <Button fx:id="closeBtn" minWidth="80" mnemonicParsing="false" styleClass="win-button" text="Close" />
+        </HBox>
+    </bottom>
+</BorderPane>

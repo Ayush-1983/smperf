@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.TextAlignment?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.pvb.smperf.ui.MainController"
+            fx:id="root"
+            stylesheets="@style.css"
+            styleClass="win-window">
+
+    <top>
+        <MenuBar fx:id="menuBar">
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem text="Open Executable…" onAction="#chooseBinary"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem text="Exit" onAction="#exitApp"/>
+                    </items>
+                </Menu>
+                <Menu text="View">
+                    <items>
+                        <MenuItem text="Results &amp; Scaling Chart" onAction="#showResultsView"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem text="System Topology &amp; Specs…" onAction="#showSpecsWindow"/>
+                    </items>
+                </Menu>
+                <Menu text="Help">
+                    <items>
+                        <MenuItem text="About SMPerf" onAction="#showAboutDialog"/>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent;">
+            <VBox spacing="20" alignment="TOP_CENTER">
+                <padding>
+                    <Insets top="28" right="32" bottom="28" left="32"/>
+                </padding>
+
+                <!-- Header -->
+                <VBox spacing="4" alignment="CENTER">
+                    <Label text="SMPerf" styleClass="app-title"/>
+                    <Label text="CPU Performance &amp; Scaling Analyzer" styleClass="app-subtitle"/>
+                </VBox>
+
+                <!-- Machine summary card -->
+                <VBox spacing="8" styleClass="card" maxWidth="720">
+                    <Label text="Detected Machine" styleClass="card-title"/>
+                    <Label fx:id="machineSummaryLbl" text="Detecting hardware…" styleClass="muted"/>
+                </VBox>
+
+                <!-- Configuration card -->
+                <VBox spacing="14" styleClass="card" maxWidth="720">
+                    <Label text="Benchmark Configuration" styleClass="card-title"/>
+
+                    <!-- Target -->
+                    <VBox spacing="4">
+                        <Label text="Target executable" styleClass="field-label"/>
+                        <HBox spacing="8">
+                            <TextField fx:id="binaryField" editable="false"
+                                       promptText="Select a program to benchmark"
+                                       HBox.hgrow="ALWAYS"/>
+                            <Button text="Browse…" onAction="#chooseBinary"/>
+                        </HBox>
+                        <Label fx:id="selectedInfo" text="No executable selected" styleClass="muted"/>
+                    </VBox>
+
+                    <!-- Arguments -->
+                    <VBox spacing="4">
+                        <Label text="Program arguments" styleClass="field-label"/>
+                        <TextArea fx:id="argumentsField" prefRowCount="4"
+                                  promptText="--size 1000000&#10;--threads {threads}"
+                                  styleClass="code-area" wrapText="true"/>
+                    </VBox>
+
+                    <!-- Threads -->
+                    <VBox spacing="4">
+                        <Label text="Thread configuration" styleClass="field-label"/>
+                        <HBox spacing="8">
+                            <ComboBox fx:id="threadMode" prefWidth="130"/>
+                            <TextField fx:id="threadField" text="1,2,4,8" HBox.hgrow="ALWAYS"
+                                       promptText="e.g. 1,2,4,8,16"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Run parameters -->
+                    <GridPane hgap="16" vgap="10">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="140"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <Label text="Measured repetitions" styleClass="field-label" GridPane.rowIndex="0"/>
+                        <Spinner fx:id="repeats" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label text="Warmup runs" styleClass="field-label" GridPane.rowIndex="1"/>
+                        <Spinner fx:id="warmup" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                        <Label text="Timeout per run (s)" styleClass="field-label" GridPane.rowIndex="2"/>
+                        <TextField fx:id="timeout" text="60" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    </GridPane>
+
+                    <!-- Action buttons -->
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="runButton" text="Run Benchmark" styleClass="primary-button"
+                                maxWidth="Infinity" HBox.hgrow="ALWAYS" onAction="#startBenchmark"/>
+                        <Button fx:id="cancelButton" text="Cancel" disable="true"
+                                onAction="#cancelBenchmark"/>
+                        <Button fx:id="viewResultsBtn" text="View Results" styleClass="secondary-button"
+                                onAction="#showResultsView"/>
+                    </HBox>
+
+                    <Label fx:id="status" text="Ready" styleClass="muted"/>
+                </VBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+    <bottom>
+        <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="12">
+            <Label fx:id="footerStatus" text="Ready" styleClass="muted"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="SMPerf 1.0" styleClass="muted"/>
+        </HBox>
+    </bottom>
+</BorderPane>

@@ -1,0 +1,237 @@
+/* ===== Base: classic grey desktop-app look ===== */
+.win-window {
+    -fx-background-color: #d4d0c8;
+    -fx-font-family: "Tahoma", "DejaVu Sans", "Liberation Sans", Arial, sans-serif;
+    -fx-font-size: 12px;
+}
+
+.label {
+    -fx-text-fill: #000000;
+}
+
+/* ===== Etched group boxes with a title cut into the border ===== */
+.group-box {
+    -fx-border-color: #808080 #ffffff #ffffff #808080, #ffffff #808080 #808080 #ffffff;
+    -fx-border-insets: 0, 1;
+    -fx-border-width: 1, 1;
+    -fx-padding: 14 10 10 10;
+}
+
+.group-title {
+    -fx-background-color: #d4d0c8;
+    -fx-padding: 0 4 0 4;
+    -fx-text-fill: #000080;
+}
+
+/* ===== Key / value rows ===== */
+.model-text {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 0 0 2 0;
+}
+
+.key {
+    -fx-text-fill: #404040;
+}
+
+.val {
+    -fx-font-family: "Monospaced", "DejaVu Sans Mono", monospace;
+    -fx-font-size: 12px;
+}
+
+.note {
+    -fx-text-fill: #404040;
+    -fx-font-size: 11px;
+}
+
+.separator:horizontal .line {
+    -fx-background-color: transparent;
+    -fx-border-color: #808080 transparent #ffffff transparent;
+    -fx-border-width: 1 0 1 0;
+    -fx-padding: 0;
+}
+
+/* ===== Sunken tables ===== */
+.table-view {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-padding: 2;
+    -fx-border-color: #808080 #ffffff #ffffff #808080, #404040 #d4d0c8 #d4d0c8 #404040;
+    -fx-border-insets: 0, 1;
+    -fx-border-width: 1, 1;
+}
+
+.table-view:focused {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #d4d0c8;
+    -fx-padding: 0;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-size: 22px;
+    -fx-background-color: #d4d0c8;
+    -fx-background-insets: 0;
+    -fx-padding: 0 6 0 6;
+    -fx-border-color: #ffffff #808080 #808080 #ffffff;
+    -fx-border-width: 1;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #000000;
+    -fx-font-weight: normal;
+    -fx-alignment: center-left;
+}
+
+.table-view .corner {
+    -fx-background-color: #d4d0c8;
+}
+
+.table-row-cell,
+.table-row-cell:odd {
+    -fx-cell-size: 21px;
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-table-cell-border-color: transparent;
+}
+
+/* shading alternates per PHYSICAL core, so hyperthread pairs read as one block */
+.table-row-cell.core-alt {
+    -fx-background-color: #ecebe4;
+}
+
+.table-cell {
+    -fx-padding: 0 6 0 6;
+    -fx-text-fill: #000000;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent #e3e1da transparent transparent;
+}
+
+.table-cell.num {
+    -fx-alignment: center-right;
+    -fx-font-family: "Monospaced", "DejaVu Sans Mono", monospace;
+}
+
+.table-cell.type-performance { -fx-text-fill: #0b3d91; -fx-font-weight: bold; }
+.table-cell.type-efficiency  { -fx-text-fill: #1b6b1b; -fx-font-weight: bold; }
+.table-cell.type-uniform     { -fx-text-fill: #404040; }
+
+.table-row-cell:filled:selected,
+.table-view:focused .table-row-cell:filled:selected {
+    -fx-background-color: #000080;
+}
+
+.table-row-cell:filled:selected .table-cell,
+.table-view:focused .table-row-cell:filled:selected .table-cell {
+    -fx-text-fill: #ffffff;
+}
+
+/* ===== Scrollbars ===== */
+.scroll-bar {
+    -fx-background-color: #e8e6e0;
+    -fx-padding: 0;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #d4d0c8;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: #ffffff #404040 #404040 #ffffff;
+    -fx-border-width: 1;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: #d4d0c8;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 3;
+    -fx-border-color: #ffffff #404040 #404040 #ffffff;
+    -fx-border-width: 1;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: #000000;
+    -fx-padding: 2.5 3.5 2.5 3.5;
+}
+
+/* ===== Status bar + button ===== */
+.status-panel {
+    -fx-border-color: #808080 #ffffff #ffffff #808080;
+    -fx-border-width: 1;
+    -fx-padding: 4 8 4 8;
+    -fx-text-fill: #202020;
+}
+
+.win-button {
+    -fx-background-color: #d4d0c8;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: #ffffff #404040 #404040 #ffffff, #d4d0c8 #808080 #808080 #d4d0c8;
+    -fx-border-insets: 0, 1;
+    -fx-border-width: 1, 1;
+    -fx-border-radius: 0;
+    -fx-text-fill: #000000;
+    -fx-padding: 4 18 4 18;
+}
+
+.win-button:pressed {
+    -fx-border-color: #404040 #ffffff #ffffff #404040, #808080 #d4d0c8 #d4d0c8 #808080;
+    -fx-padding: 5 17 3 19;
+}
+
+.win-button:focused {
+    -fx-text-fill: #000080;
+}
+/* Make the main window background classic grey */
+.win-window {
+    -fx-background-color: #d4d0c8;
+    -fx-font-family: "Tahoma", "DejaVu Sans", "Liberation Sans", Arial, sans-serif;
+    -fx-font-size: 12px;
+}
+
+/* Menu bar classic look */
+.menu-bar {
+    -fx-background-color: #d4d0c8;
+    -fx-border-color: #808080 transparent #ffffff transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.menu-bar .label {
+    -fx-text-fill: #000000;
+}
+.menu-item:focused, .menu-item:hover {
+    -fx-background-color: #000080;
+}
+.menu-item:focused .label, .menu-item:hover .label {
+    -fx-text-fill: #ffffff;
+}
+
+/* Better text fields in classic style */
+.text-field, .text-area, .combo-box, .spinner {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #808080 #ffffff #ffffff #808080;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+/* Green run button still stands out */
+#runButton {
+    -fx-background-color: #2e8b57;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+#runButton:hover {
+    -fx-background-color: #3cb371;
+}

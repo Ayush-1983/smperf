@@ -1,0 +1,227 @@
+/* ===== Base ===== */
+.root, .win-window {
+    -fx-background-color: #e8e6e3;
+    -fx-font-family: "Segoe UI", "Inter", "DejaVu Sans", sans-serif;
+    -fx-font-size: 13px;
+}
+
+.label {
+    -fx-text-fill: #1a1a1a;
+}
+
+.muted {
+    -fx-text-fill: #5c5c5c;
+}
+
+/* ===== Menu bar ===== */
+.menu-bar {
+    -fx-background-color: #f5f4f2;
+    -fx-border-color: transparent transparent #c8c5c0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 2 4 2 4;
+}
+.menu-bar .label {
+    -fx-text-fill: #1a1a1a;
+}
+.menu-item:focused, .menu-item:hover {
+    -fx-background-color: #3b6ea5;
+}
+.menu-item:focused .label, .menu-item:hover .label {
+    -fx-text-fill: white;
+}
+
+/* ===== Cards / sections ===== */
+.card {
+    -fx-background-color: #faf9f7;
+    -fx-background-radius: 8;
+    -fx-border-color: #c8c5c0;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 16 18 16 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);
+}
+
+.card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.section-heading {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a1a1a;
+}
+
+.app-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e3a5f;
+}
+
+.app-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #5c5c5c;
+}
+
+/* ===== Form controls ===== */
+.text-field, .text-area, .combo-box, .spinner {
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-border-color: #b0aca6;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 5 8 5 8;
+}
+.text-field:focused, .text-area:focused, .combo-box:focused {
+    -fx-border-color: #3b6ea5;
+    -fx-effect: dropshadow(gaussian, rgba(59,110,165,0.25), 4, 0, 0, 0);
+}
+
+.code-area {
+    -fx-font-family: "Consolas", "DejaVu Sans Mono", monospace;
+    -fx-font-size: 12px;
+}
+
+.field-label {
+    -fx-text-fill: #4a4a4a;
+    -fx-font-weight: 600;
+    -fx-font-size: 12px;
+}
+
+/* ===== Buttons ===== */
+.button {
+    -fx-background-color: #f0eeeb;
+    -fx-background-radius: 6;
+    -fx-border-color: #b0aca6;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-text-fill: #1a1a1a;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+}
+.button:hover {
+    -fx-background-color: #e4e1dc;
+}
+.button:pressed {
+    -fx-background-color: #d5d1cb;
+}
+
+.primary-button {
+    -fx-background-color: #2e7d4f;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: #256b42;
+}
+.primary-button:hover {
+    -fx-background-color: #35945c;
+}
+.primary-button:disabled {
+    -fx-background-color: #9bbfad;
+    -fx-text-fill: #e8f0ec;
+}
+
+.secondary-button {
+    -fx-background-color: #3b6ea5;
+    -fx-text-fill: white;
+    -fx-border-color: #2f5a8a;
+}
+.secondary-button:hover {
+    -fx-background-color: #4a7db8;
+}
+
+/* ===== Tables ===== */
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #c8c5c0;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 0;
+}
+.table-view .column-header-background {
+    -fx-background-color: #f0eeeb;
+}
+.table-view .column-header, .table-view .filler {
+    -fx-size: 28px;
+    -fx-background-color: #f0eeeb;
+    -fx-border-color: transparent transparent #c8c5c0 transparent;
+}
+.table-view .column-header .label {
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: 600;
+}
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #eeebe7 transparent;
+}
+.table-row-cell:odd {
+    -fx-background-color: #faf9f7;
+}
+.table-row-cell:filled:selected {
+    -fx-background-color: #3b6ea5;
+}
+.table-row-cell:filled:selected .table-cell {
+    -fx-text-fill: white;
+}
+.table-cell {
+    -fx-padding: 4 10 4 10;
+}
+
+/* Performance / Efficiency colours in tables */
+.type-performance { -fx-text-fill: #1a4a8a; -fx-font-weight: bold; }
+.type-efficiency  { -fx-text-fill: #1b6b3a; -fx-font-weight: bold; }
+
+/* ===== Chart ===== */
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+}
+.chart-plot-background {
+    -fx-background-color: white;
+}
+.axis {
+    -fx-tick-label-fill: #5c5c5c;
+}
+.axis-label {
+    -fx-text-fill: #2c3e50;
+}
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines {
+    -fx-stroke: #e8e6e3;
+}
+
+/* ===== Status / footer ===== */
+.status-bar {
+    -fx-background-color: #f5f4f2;
+    -fx-border-color: #c8c5c0 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 6 14 6 14;
+}
+
+/* ===== Specs window (classic group boxes kept but softened) ===== */
+.group-box {
+    -fx-background-color: #faf9f7;
+    -fx-background-radius: 6;
+    -fx-border-color: #c8c5c0;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 16 14 12 14;
+}
+.group-title {
+    -fx-background-color: #faf9f7;
+    -fx-padding: 0 6 0 6;
+    -fx-text-fill: #1e3a5f;
+    -fx-font-weight: bold;
+}
+.model-text {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+.key { -fx-text-fill: #5c5c5c; }
+.val { -fx-font-family: "Consolas", monospace; }
+
+/* ===== Empty state ===== */
+.empty-state {
+    -fx-text-fill: #6b6b6b;
+    -fx-font-size: 14px;
+}

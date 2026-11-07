@@ -14,22 +14,7 @@
     <!-- Menus. Navigation lives ONLY in the tab strip (added by Workspace); File/Edit items are
          added by SessionActions. -->
     <top>
-        <MenuBar fx:id="menuBar">
-            <menus>
-                <Menu text="File">
-                    <items>
-                        <MenuItem text="Open Executable…" onAction="#chooseBinary"/>
-                        <SeparatorMenuItem/>
-                        <MenuItem text="Exit" onAction="#exitApp"/>
-                    </items>
-                </Menu>
-                <Menu text="Help">
-                    <items>
-                        <MenuItem text="About SMPerf" onAction="#showAboutDialog"/>
-                    </items>
-                </Menu>
-            </menus>
-        </MenuBar>
+        <MenuBar fx:id="menuBar"/>
     </top>
 
     <!-- Home page: configure along the top, watch the run in the log that fills the rest -->
@@ -124,12 +109,13 @@
         </VBox>
     </center>
 
-    <!-- One status bar for the whole app -->
     <bottom>
-        <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="3">
+        <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="4">
             <Label fx:id="footerStatus" text="Ready" styleClass="status-panel"
                    maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
             <ProgressBar fx:id="runProgress" progress="-1" prefWidth="150" visible="false" managed="false"/>
+            <Label fx:id="footerResults" text="No results" styleClass="status-panel" minWidth="110"/>
+            <Label fx:id="footerEngine" text="Engine: …" styleClass="status-panel" minWidth="110"/>
             <Label text="SMPerf 1.0" styleClass="status-panel"/>
         </HBox>
     </bottom>

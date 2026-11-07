@@ -42,7 +42,15 @@ public final class Workspace {
     // centre area = page + (optional) dialog layer on top
     private final StackPane page = new StackPane();
     private final StackPane overlay = new StackPane();
+    // field (add near the other fields)
+    private final VBox top = new VBox();
 
+// constructor: delete the line  "VBox top = new VBox();"  (it now uses the field)
+
+    // new method (anywhere in the class)
+    public void insertTop(int index, Node n) {
+        top.getChildren().add(Math.min(index, top.getChildren().size()), n);
+    }
     public Workspace(BorderPane root) {
         this.root = root;
         strip.getStyleClass().add("nav-strip");

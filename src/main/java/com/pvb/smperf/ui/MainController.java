@@ -69,7 +69,9 @@ public class MainController {
     private SessionService session;
     private SessionActions sessionActions;
     private SavedConfig lastSavedConfig;   // snapshot of the config of the run in progress
-
+    @FXML private Label footerResults;
+    @FXML private Label footerEngine;
+    private TopologyWindow topologyWindow;
     @FXML
     private void initialize() {
         // Spinners need factories
@@ -83,21 +85,30 @@ public class MainController {
                 threadField.setDisable(!"Manual".equals(threadMode.getValue())));
 
         argumentsField.setPromptText("e.g.  --size  then  1000000  on the next line");
-
+        MenuItem cp = new MenuItem("Copy");        cp.setOnAction(e -> logArea.copy());
+        MenuItem sa = new MenuItem("Select All");  sa.setOnAction(e -> logArea.selectAll());
+        MenuItem cl = new MenuItem("Clear Log");   cl.setOnAction(e -> logArea.clear());
+        logArea.setContextMenu(new ContextMenu(cp, sa, new SeparatorMenuItem(), cl));
         loadResultsView();
         loadSpecsView();
         buildWorkspace();
 
         // the Results tab shows how many configurations it holds
-        resultData.addListener((ListChangeListener<ConfigResult>) c ->
-                workspace.setTabTitle("results",
-                        resultData.isEmpty() ? "Results" : "Results (" + resultData.size() + ")"));
+        resultData.addListener((ListChangeListener<ConfigResult>) c -> {
+            workspace.setTabTitle("results",
+                    resultData.isEmpty() ? "Results" : "Results (" + resultData.size() + ")");
+            footerResults.setText(resultData.isEmpty() ? "No results"
+                    : resultData.size() + (resultData.size() == 1 ? " configuration" : " configurations"));
+        });
 
         try {
             engine = new EngineClient(EngineLocator.find());
             loadMachineAsync();
+            footerEngine.setText("Engine: ready");
+
         } catch (Exception ex) {
             setStatus("Engine unavailable");
+            footerEngine.setText("Engine: missing");
             runButton.setDisable(true);
             mCpu.setText("Engine not found");
             mCores.setText("-");
@@ -155,18 +166,30 @@ public class MainController {
         workspace.register(new Workspace.View("home", "Home", () -> homeNode));
         workspace.register(new Workspace.View("results", "Results",
                 () -> resultsRoot,
-                () -> {                      // runs every time the tab is opened
-                    if (resultsController != null) resultsController.setResults(resultData);
-                }));
-        workspace.register(new Workspace.View("topology", "Topology", () -> specsRoot));
+                () -> { if (resultsController != null) resultsController.setResults(resultData); }));
         workspace.register(new Workspace.View("session", "Session",
                 () -> new SessionView(session, sessionActions)));
+        workspace.register(new Workspace.View("compare", "Compare", () -> new CompareView(session, workspace)));
+        // Topology is no longer a tab: it has its own window.
 
-        sessionActions.install(menuBar);          // File / Edit items
-        workspace.installShortcuts();             // Ctrl+1..4 switch tabs (no duplicate menu entries)
-        sessionActions.installDropTarget(root);   // drop a .json/.csv anywhere to open it
+        topologyWindow = new TopologyWindow(specsRoot, workspace);
+        AppMenus menus = new AppMenus(root, workspace, session, sessionActions, topologyWindow,
+                runButton.disableProperty(), cancelButton.disableProperty(),
+                new AppMenus.Hooks(this::chooseBinary, this::startBenchmark, this::cancelBenchmark,
+                        () -> logArea.clear(), this::copyLog, this::showAboutDialog, this::exitApp));
+        menus.buildMenus(menuBar);                    // must come BEFORE sessionActions.install
+        workspace.insertTop(1, menus.buildToolbar()); // between menu bar and tab strip
+        sessionActions.install(menuBar);              // adds Open Results / Recent / Save / Export / Clear Results
+        sessionActions.installDropTarget(root);
 
         workspace.show("home");
+    }
+
+    private void copyLog() {
+        javafx.scene.input.ClipboardContent c = new javafx.scene.input.ClipboardContent();
+        c.putString(logArea.getText());
+        javafx.scene.input.Clipboard.getSystemClipboard().setContent(c);
+        workspace.info("Run log copied to clipboard");
     }
 
     // ------------------------------------------------------------------

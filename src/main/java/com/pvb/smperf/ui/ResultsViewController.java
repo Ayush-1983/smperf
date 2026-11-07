@@ -9,14 +9,20 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 
 public class ResultsViewController {
 
+    private static final int DEFAULT_NOISE_PERCENT = 5;
+
     @FXML private LineChart<Number, Number> chart;
     @FXML private TableView<ConfigResult> table;
     @FXML private Label summaryLbl;
+    @FXML private Spinner<Integer> noiseSpinner;
 
     @FXML private TableColumn<ConfigResult, String> colThreads;
     @FXML private TableColumn<ConfigResult, String> colRuns;
@@ -25,6 +31,7 @@ public class ResultsViewController {
     @FXML private TableColumn<ConfigResult, String> colMean;
     @FXML private TableColumn<ConfigResult, String> colMax;
     @FXML private TableColumn<ConfigResult, String> colStd;
+    @FXML private TableColumn<ConfigResult, String> colNoise;
     @FXML private TableColumn<ConfigResult, String> colUser;
     @FXML private TableColumn<ConfigResult, String> colSys;
     @FXML private TableColumn<ConfigResult, String> colRam;
@@ -35,6 +42,8 @@ public class ResultsViewController {
     private final XYChart.Series<Number, Number> measured = new XYChart.Series<>();
     private final XYChart.Series<Number, Number> ideal = new XYChart.Series<>();
     private int baselineThreads = -1;
+    private double noiseThreshold = DEFAULT_NOISE_PERCENT / 100.0;
+    private List<ConfigResult> lastResults = List.of();
 
     @FXML
     private void initialize() {
@@ -44,27 +53,70 @@ public class ResultsViewController {
 
         setupColumns();
         setupChart();
+        setupNoiseControl();
     }
 
     public void setResults(ObservableList<ConfigResult> results) {
-        data.setAll(results);
-        rebuildChart(results);
-
-        if (results == null || results.isEmpty()) {
-            summaryLbl.setText("No results yet — run a benchmark first.");
-        } else {
-            summaryLbl.setText(String.format(Locale.ROOT, "%d %s completed", results.size(),
-                    results.size() == 1 ? "configuration" : "configurations"));
-        }
+        lastResults = results == null ? List.of() : new ArrayList<>(results);
+        data.setAll(lastResults);
+        rebuildChart(lastResults);
+        updateSummary();
     }
 
     public void clear() {
+        lastResults = List.of();
         data.clear();
         measured.getData().clear();
         ideal.getData().clear();
         baselineThreads = -1;
-        summaryLbl.setText("No results yet — run a benchmark first.");
+        updateSummary();
     }
+
+    // ------------------------------------------------------------- noise
+
+    /** Std Dev / Mean of wall time, or NaN when there are too few good runs to say. */
+    private static double noise(ConfigResult r) {
+        var s = r.stats();
+        int ok = s.runs() - s.failed();
+        if (ok < 2 || s.wallMean() <= 0) return Double.NaN;
+        return s.wallStddev() / s.wallMean();
+    }
+
+    private boolean isNoisy(ConfigResult r) {
+        double n = noise(r);
+        return !Double.isNaN(n) && n > noiseThreshold;
+    }
+
+    private void setupNoiseControl() {
+        noiseSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 50, DEFAULT_NOISE_PERCENT));
+        // commit typed text when the field loses focus
+        noiseSpinner.getEditor().focusedProperty().addListener((o, was, focused) -> {
+            if (!focused) noiseSpinner.increment(0);
+        });
+        noiseSpinner.valueProperty().addListener((o, old, v) -> {
+            if (v == null) return;
+            noiseThreshold = v / 100.0;
+            table.refresh();
+            rebuildChart(lastResults);
+            updateSummary();
+        });
+    }
+
+    private void updateSummary() {
+        if (data.isEmpty()) {
+            summaryLbl.setText("No results yet — run a benchmark first.");
+            return;
+        }
+        String base = String.format(Locale.ROOT, "%d %s completed", data.size(),
+                data.size() == 1 ? "configuration" : "configurations");
+        long noisy = data.stream().filter(this::isNoisy).count();
+        summaryLbl.setText(noisy == 0 ? base : String.format(Locale.ROOT,
+                "%s — ⚠ %d noisy (above %.0f%%): try more repetitions or close other apps",
+                base, noisy, noiseThreshold * 100));
+    }
+
+    // ----------------------------------------------------------- columns
 
     private void setupColumns() {
         colThreads.setCellValueFactory(c -> str(c, r -> String.valueOf(r.stats().threads())));
@@ -74,6 +126,25 @@ public class ResultsViewController {
         colMean.setCellValueFactory(c -> str(c, r -> fmt(r.stats().wallMean())));
         colMax.setCellValueFactory(c -> str(c, r -> fmt(r.stats().wallMax())));
         colStd.setCellValueFactory(c -> str(c, r -> fmt(r.stats().wallStddev())));
+        colNoise.setCellValueFactory(c -> str(c, r -> {
+            double n = noise(r);
+            return Double.isNaN(n) ? "—" : String.format(Locale.ROOT, "%.1f%%", n * 100);
+        }));
+        colNoise.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().remove("noisy-cell");
+                if (empty || item == null) {
+                    setText(null);
+                    return;
+                }
+                ConfigResult r = getTableRow() == null ? null : getTableRow().getItem();
+                boolean noisy = r != null && isNoisy(r);
+                setText(noisy ? "⚠ " + item : item);
+                if (noisy) getStyleClass().add("noisy-cell");
+            }
+        });
         colUser.setCellValueFactory(c -> str(c, r -> fmt(r.stats().userMean())));
         colSys.setCellValueFactory(c -> str(c, r -> fmt(r.stats().sysMean())));
         colRam.setCellValueFactory(c -> str(c, r -> String.format(Locale.ROOT, "%.1f", r.stats().maxRssKb() / 1024.0)));
@@ -83,6 +154,8 @@ public class ResultsViewController {
                 Double.isNaN(r.efficiency()) ? "—" : String.format(Locale.ROOT, "%.1f%%", r.efficiency() * 100)));
     }
 
+    // ------------------------------------------------------------- chart
+
     private void setupChart() {
         measured.setName("Measured");
         ideal.setName("Ideal scaling");
@@ -91,7 +164,7 @@ public class ResultsViewController {
         ((NumberAxis) chart.getXAxis()).setForceZeroInRange(false);
     }
 
-    private void rebuildChart(ObservableList<ConfigResult> results) {
+    private void rebuildChart(List<ConfigResult> results) {
         measured.getData().clear();
         ideal.getData().clear();
         baselineThreads = -1;
@@ -103,18 +176,26 @@ public class ResultsViewController {
             int t = r.stats().threads();
             if (baselineThreads < 0) baselineThreads = t;
 
+            boolean noisy = isNoisy(r);
+            double n = noise(r);
+
             XYChart.Data<Number, Number> point = new XYChart.Data<>(t, r.speedup());
             point.nodeProperty().addListener((obs, old, node) -> {
-                if (node != null) {
-                    Tooltip.install(node, new Tooltip(String.format(Locale.ROOT,
-                            "%d threads → %.2f× speedup (%.0f%% efficiency)",
-                            t, r.speedup(), r.efficiency() * 100)));
+                if (node == null) return;
+                String tip = String.format(Locale.ROOT, "%d threads → %.2f× speedup (%.0f%% efficiency)",
+                        t, r.speedup(), r.efficiency() * 100);
+                if (noisy) {
+                    tip += String.format(Locale.ROOT, "%n⚠ noisy: Std Dev is %.1f%% of the mean", n * 100);
+                    node.getStyleClass().add("noisy-point");
                 }
+                Tooltip.install(node, new Tooltip(tip));
             });
             measured.getData().add(point);
             ideal.getData().add(new XYChart.Data<>(t, (double) t / baselineThreads));
         }
     }
+
+    // ----------------------------------------------------------- helpers
 
     private static ReadOnlyStringWrapper str(TableColumn.CellDataFeatures<ConfigResult, String> c,
                                              Function<ConfigResult, String> f) {

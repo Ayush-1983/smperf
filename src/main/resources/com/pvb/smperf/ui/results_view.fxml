@@ -19,7 +19,7 @@
             </padding>
 
             <GroupBox title="Speedup vs threads">
-                <LineChart fx:id="chart" animated="false" legendVisible="true" VBox.vgrow="ALWAYS">
+                <LineChart fx:id="chart" animated="false" legendVisible="true" VBox.vgrow="ALWAYS" styleClass="speedup-chart">
                     <xAxis>
                         <NumberAxis label="Threads" forceZeroInRange="false"/>
                     </xAxis>
@@ -39,6 +39,7 @@
                         <TableColumn fx:id="colMean" text="Mean (s)" prefWidth="90"/>
                         <TableColumn fx:id="colMax" text="Max (s)" prefWidth="90"/>
                         <TableColumn fx:id="colStd" text="Std Dev" prefWidth="80"/>
+                        <TableColumn fx:id="colNoise" text="Noise" prefWidth="80"/>
                         <TableColumn fx:id="colUser" text="User (s)" prefWidth="80"/>
                         <TableColumn fx:id="colSys" text="System (s)" prefWidth="80"/>
                         <TableColumn fx:id="colRam" text="Peak RAM (MB)" prefWidth="110"/>
@@ -46,7 +47,13 @@
                         <TableColumn fx:id="colEff" text="Efficiency" prefWidth="90"/>
                     </columns>
                 </TableView>
-                <Label fx:id="summaryLbl" text="No results yet — run a benchmark first." styleClass="note"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label fx:id="summaryLbl" text="No results yet — run a benchmark first." styleClass="note"
+                           maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+                    <Label text="Flag noise above" styleClass="note"/>
+                    <Spinner fx:id="noiseSpinner" editable="true" prefWidth="75"/>
+                    <Label text="percent of mean (Std Dev ÷ Mean)" styleClass="note"/>
+                </HBox>
             </GroupBox>
         </SplitPane>
     </center>

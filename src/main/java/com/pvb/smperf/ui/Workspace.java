@@ -3,8 +3,10 @@ package com.pvb.smperf.ui;
 import javafx.animation.PauseTransition;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.*;
@@ -15,8 +17,10 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * Nav strip + view switching inside the SAME scene (no extra stages), plus a message bar
- * that replaces pop-up alerts. New features = register(new View(...)).
+ * Tab strip + view switching inside the SAME scene (no extra stages, so the window manager never
+ * gets a chance to minimise / un-maximise the main window), a message bar that replaces pop-up
+ * alerts, and an in-window dialog layer that replaces modal pop-up windows.
+ * New features = register(new View(...)).
  */
 public final class Workspace {
 
@@ -29,15 +33,20 @@ public final class Workspace {
     private final Map<String, Node> built = new HashMap<>();
     private final Map<String, ToggleButton> tabs = new LinkedHashMap<>();
     private final ToggleGroup group = new ToggleGroup();
-    private final HBox strip = new HBox(2);
+    private final HBox strip = new HBox(0);
     private final HBox msgBar = new HBox(8);
     private final Label msgText = new Label();
     private final PauseTransition autoHide = new PauseTransition(Duration.seconds(6));
     private final ReadOnlyStringWrapper current = new ReadOnlyStringWrapper();
 
+    // centre area = page + (optional) dialog layer on top
+    private final StackPane page = new StackPane();
+    private final StackPane overlay = new StackPane();
+
     public Workspace(BorderPane root) {
         this.root = root;
         strip.getStyleClass().add("nav-strip");
+        strip.setAlignment(Pos.BOTTOM_LEFT);
         msgBar.getStyleClass().add("msg-bar");
         msgBar.setAlignment(Pos.CENTER_LEFT);
         hideBar();
@@ -46,6 +55,12 @@ public final class Workspace {
         if (root.getTop() != null) top.getChildren().add(root.getTop());   // keep the existing MenuBar
         top.getChildren().addAll(strip, msgBar);
         root.setTop(top);
+
+        overlay.getStyleClass().add("overlay");
+        overlay.setVisible(false);
+        overlay.setManaged(false);
+        overlay.setOnMouseClicked(e -> e.consume());     // block clicks on the page underneath
+        root.setCenter(new StackPane(page, overlay));
 
         group.selectedToggleProperty().addListener((o, old, now) -> {
             if (now == null) { if (old != null) old.setSelected(true); return; }   // never deselect
@@ -62,6 +77,7 @@ public final class Workspace {
         t.setUserData(v.id());
         t.setToggleGroup(group);
         t.setFocusTraversable(false);
+        t.setMnemonicParsing(false);
         tabs.put(v.id(), t);
         strip.getChildren().add(t);
     }
@@ -73,8 +89,9 @@ public final class Workspace {
     }
 
     private void activate(String id) {
+        closeDialog();
         View v = views.get(id);
-        root.setCenter(built.computeIfAbsent(id, k -> v.content().get()));
+        page.getChildren().setAll(built.computeIfAbsent(id, k -> v.content().get()));
         current.set(id);
         v.onShow().run();            // lets a view refresh itself every time it is opened
     }
@@ -87,19 +104,19 @@ public final class Workspace {
         if (t != null) t.setText(text);
     }
 
-    /** Puts "Home / Results / Session  (Ctrl+1..n)" at the top of the View menu. */
-    public void installViewMenu(MenuBar menuBar) {
-        Menu view = menuBar.getMenus().stream().filter(m -> "View".equals(m.getText()))
-                .findFirst().orElse(null);
-        if (view == null) return;
-        int i = 0;
-        for (View v : views.values()) {
-            MenuItem mi = new MenuItem(v.title());
-            mi.setAccelerator(KeyCombination.keyCombination("Shortcut+" + (i + 1)));
-            mi.setOnAction(e -> show(v.id()));
-            view.getItems().add(i++, mi);
-        }
-        view.getItems().add(i, new SeparatorMenuItem());
+    /** Ctrl+1..n (Cmd on macOS) switches views. Replaces the duplicate entries in the View menu. */
+    public void installShortcuts() {
+        Runnable install = () -> {
+            Scene s = root.getScene();
+            if (s == null) return;
+            int i = 1;
+            for (View v : views.values()) {
+                final String id = v.id();
+                s.getAccelerators().put(KeyCombination.keyCombination("Shortcut+" + i++), () -> show(id));
+            }
+        };
+        if (root.getScene() != null) install.run();
+        else root.sceneProperty().addListener((o, was, now) -> { if (now != null) install.run(); });
     }
 
     public Window window() {
@@ -114,7 +131,6 @@ public final class Workspace {
     /** Inline confirmation instead of a modal dialog. */
     public void ask(String text, String yesLabel, Runnable onYes) {
         Button yes = new Button(yesLabel);
-        yes.getStyleClass().add("secondary-button");
         yes.setOnAction(e -> { hideBar(); onYes.run(); });
         Button no = new Button("Cancel");
         no.setOnAction(e -> hideBar());
@@ -149,5 +165,49 @@ public final class Workspace {
         autoHide.stop();
         msgBar.setVisible(false);
         msgBar.setManaged(false);
+    }
+
+    // ------------------------------------------------------ dialog layer
+
+    /** A classic dialog box drawn inside the window (title bar, body, OK). Esc / Enter close it. */
+    public void showDialog(String title, Node body) {
+        Label t = new Label(title);
+        t.getStyleClass().add("dlg-title-text");
+        Region sp = new Region();
+        HBox.setHgrow(sp, Priority.ALWAYS);
+        Button x = new Button("✕");
+        x.getStyleClass().add("dlg-close");
+        x.setFocusTraversable(false);
+        x.setOnAction(e -> closeDialog());
+        HBox bar = new HBox(6, t, sp, x);
+        bar.getStyleClass().add("dlg-title");
+        bar.setAlignment(Pos.CENTER_LEFT);
+
+        Button ok = new Button("OK");
+        ok.setMinWidth(84);
+        ok.setDefaultButton(true);
+        ok.setCancelButton(true);
+        ok.setOnAction(e -> closeDialog());
+        HBox buttons = new HBox(ok);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox content = new VBox(14, body, buttons);
+        content.setPadding(new Insets(16));
+
+        VBox dialog = new VBox(bar, content);
+        dialog.getStyleClass().add("dialog");
+        dialog.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        dialog.setMinWidth(380);
+
+        overlay.getChildren().setAll(dialog);
+        overlay.setManaged(true);
+        overlay.setVisible(true);
+        ok.requestFocus();
+    }
+
+    public void closeDialog() {
+        overlay.setVisible(false);
+        overlay.setManaged(false);
+        overlay.getChildren().clear();
     }
 }

@@ -14,7 +14,6 @@ import java.util.function.Function;
 
 public class ResultsViewController {
 
-    @FXML private Button backBtn;
     @FXML private LineChart<Number, Number> chart;
     @FXML private TableView<ConfigResult> table;
     @FXML private Label summaryLbl;
@@ -36,25 +35,15 @@ public class ResultsViewController {
     private final XYChart.Series<Number, Number> measured = new XYChart.Series<>();
     private final XYChart.Series<Number, Number> ideal = new XYChart.Series<>();
     private int baselineThreads = -1;
-    private Runnable onBack;
 
     @FXML
     private void initialize() {
         table.setItems(data);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-        table.setPlaceholder(new Label("No results yet — run a benchmark from the home page."));
+        table.setPlaceholder(new Label("No results yet — run a benchmark from the Home tab."));
 
         setupColumns();
         setupChart();
-    }
-
-    public void setOnBack(Runnable onBack) {
-        this.onBack = onBack;
-    }
-
-    @FXML
-    private void goBack() {
-        if (onBack != null) onBack.run();
     }
 
     public void setResults(ObservableList<ConfigResult> results) {
@@ -64,7 +53,8 @@ public class ResultsViewController {
         if (results == null || results.isEmpty()) {
             summaryLbl.setText("No results yet — run a benchmark first.");
         } else {
-            summaryLbl.setText(String.format(Locale.ROOT, "%d configurations completed", results.size()));
+            summaryLbl.setText(String.format(Locale.ROOT, "%d %s completed", results.size(),
+                    results.size() == 1 ? "configuration" : "configurations"));
         }
     }
 
@@ -98,7 +88,6 @@ public class ResultsViewController {
         ideal.setName("Ideal scaling");
         chart.getData().setAll(ideal, measured);
         chart.setAnimated(false);
-        chart.setTitle("Speedup vs threads");
         ((NumberAxis) chart.getXAxis()).setForceZeroInRange(false);
     }
 

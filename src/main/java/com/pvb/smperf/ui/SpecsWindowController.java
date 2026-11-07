@@ -5,17 +5,16 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
-import javafx.stage.Stage;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+/** Controller of the "Topology" tab (it used to be a separate pop-up window). */
 public class SpecsWindowController {
 
     // System group
@@ -28,7 +27,6 @@ public class SpecsWindowController {
     @FXML private Label clockLbl;
     @FXML private Label llcLbl;
     @FXML private Label statusLbl;
-    @FXML private Button closeBtn;
 
     // Cache table (aggregated: identical caches are collapsed into one row with a quantity)
     @FXML private TableView<CacheRow> cacheTable;
@@ -60,9 +58,6 @@ public class SpecsWindowController {
 
     @FXML
     private void initialize() {
-        closeBtn.setCancelButton(true); // Esc closes the window
-        closeBtn.setOnAction(e -> ((Stage) closeBtn.getScene().getWindow()).close());
-
         cacheTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         cpuTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         cacheTable.setPlaceholder(new Label("No cache information"));
@@ -124,10 +119,15 @@ public class SpecsWindowController {
         });
     }
 
+    /** Shown while the engine is still detecting, or when it could not. */
+    public void showMessage(String model, String status) {
+        modelLbl.setText(model);
+        statusLbl.setText(status);
+    }
+
     public void populate(MachineInfo m) {
         if (m == null) {
-            modelLbl.setText("No machine data available");
-            statusLbl.setText("Detection failed");
+            showMessage("No machine data available", "Detection failed");
             return;
         }
 

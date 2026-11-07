@@ -27,21 +27,25 @@ public final class SessionView extends ScrollPane {
     public SessionView(SessionService svc, SessionActions act) {
         this.svc = svc;
 
-        Label title = new Label("Session");
-        title.getStyleClass().add("section-heading");
-        Label sub = new Label("Save, export and reopen benchmark results.");
-        sub.getStyleClass().add("muted");
-        VBox head = new VBox(4, title, sub);
-        head.setMaxWidth(720);
+        // top row: what is loaded | save & export.  Below: open + recent files, filling the height.
+        GroupBox current = currentCard();
+        GroupBox save = saveCard(act);
+        HBox.setHgrow(current, Priority.ALWAYS);
+        save.setMinWidth(300);
+        save.setPrefWidth(300);
+        save.setMaxWidth(300);
+        HBox top = new HBox(10, current, save);
 
-        VBox page = new VBox(18, head, currentCard(), saveCard(act), openCard(act));
-        page.setPadding(new Insets(28, 32, 28, 32));
-        page.setAlignment(Pos.TOP_CENTER);
+        GroupBox open = openCard(act);
+        VBox.setVgrow(open, Priority.ALWAYS);
+
+        VBox page = new VBox(10, top, open);
+        page.setPadding(new Insets(10, 10, 8, 10));
 
         setContent(page);
         setFitToWidth(true);
+        setFitToHeight(true);
         setHbarPolicy(ScrollBarPolicy.NEVER);
-        setStyle("-fx-background-color: transparent;");
 
         InvalidationListener l = o -> refresh();
         svc.results().addListener(l);
@@ -56,11 +60,11 @@ public final class SessionView extends ScrollPane {
 
     // ------------------------------------------------------------ cards
 
-    private VBox currentCard() {
+    private GroupBox currentCard() {
         GridPane g = new GridPane();
         g.setHgap(16);
-        g.setVgap(8);
-        ColumnConstraints k = new ColumnConstraints(120);
+        g.setVgap(6);
+        ColumnConstraints k = new ColumnConstraints(100);
         ColumnConstraints v = new ColumnConstraints();
         v.setHgrow(Priority.ALWAYS);
         g.getColumnConstraints().addAll(k, v);
@@ -70,47 +74,49 @@ public final class SessionView extends ScrollPane {
         Label[] vals = {source, file, state, count, exe, args, threads, params, machine};
         for (int i = 0; i < names.length; i++) {
             Label n = new Label(names[i]);
-            n.getStyleClass().add("field-label");
+            n.getStyleClass().add("key");
+            n.setMinWidth(100);
+            vals[i].getStyleClass().add("val");
             g.add(n, 0, i);
             g.add(vals[i], 1, i);
         }
         return card("Current session", g);
     }
 
-    private VBox saveCard(SessionActions act) {
+    private GroupBox saveCard(SessionActions act) {
         Button json = new Button("Save as JSON…");
-        json.getStyleClass().add("primary-button");
         json.setOnAction(e -> act.saveJsonDialog());
         Button csv = new Button("Export CSV…");
         csv.setOnAction(e -> act.exportCsvDialog());
         Button clear = new Button("Clear results");
         clear.setOnAction(e -> act.clear());
-        for (Button b : List.of(json, csv, clear)) b.disableProperty().bind(svc.unavailable());
-
-        Region sp = new Region();
-        HBox.setHgrow(sp, Priority.ALWAYS);
-        HBox row = new HBox(10, json, csv, sp, clear);
+        for (Button b : List.of(json, csv, clear)) {
+            b.setMaxWidth(Double.MAX_VALUE);
+            b.disableProperty().bind(svc.unavailable());
+        }
 
         Label note = new Label("JSON keeps the machine, configuration and results, so a run can be "
-                + "reviewed or reproduced later. CSV holds the results table only and opens in any spreadsheet.");
-        note.getStyleClass().add("muted");
+                + "reviewed or reproduced later. CSV holds the results table only.");
+        note.getStyleClass().add("note");
         note.setWrapText(true);
-        return card("Save & export", row, note);
+        return card("Save & export", json, csv, clear, note);
     }
 
-    private VBox openCard(SessionActions act) {
+    private GroupBox openCard(SessionActions act) {
         Label hint = new Label("Drop a results file here");
         hint.getStyleClass().add("field-label");
         Label sub = new Label(".json restores everything  ·  .csv restores the results table");
-        sub.getStyleClass().add("muted");
+        sub.getStyleClass().add("note");
         Button browse = new Button("Browse…");
         browse.setOnAction(e -> act.openDialog());
         browse.disableProperty().bind(svc.busy());
 
-        VBox inner = new VBox(6, hint, sub, browse);
+        VBox inner = new VBox(8, hint, sub, browse);
         inner.setAlignment(Pos.CENTER);
         StackPane zone = new StackPane(inner);
         zone.getStyleClass().add("drop-zone");
+        zone.setMinWidth(320);
+        zone.setPrefWidth(420);
         act.installDropTarget(zone);
         zone.setOnDragEntered(e -> { if (!zone.getStyleClass().contains("drop-active")) zone.getStyleClass().add("drop-active"); });
         zone.setOnDragExited(e -> zone.getStyleClass().removeAll("drop-active"));
@@ -125,7 +131,8 @@ public final class SessionView extends ScrollPane {
         recentHead.setAlignment(Pos.CENTER_LEFT);
 
         ListView<Path> list = new ListView<>(svc.recent().items());
-        list.setPrefHeight(150);
+        list.setMinHeight(80);
+        VBox.setVgrow(list, Priority.ALWAYS);
         list.setPlaceholder(new Label("No recent files"));
         list.setCellFactory(lv -> new ListCell<>() {
             @Override protected void updateItem(Path p, boolean empty) {
@@ -138,17 +145,21 @@ public final class SessionView extends ScrollPane {
             Path sel = list.getSelectionModel().getSelectedItem();
             if (e.getClickCount() == 2 && sel != null) act.open(sel);
         });
-        return card("Open", zone, recentHead, list);
+        Label tip = new Label("Double-click a recent file to open it.");
+        tip.getStyleClass().add("note");
+
+        VBox recent = new VBox(6, recentHead, list, tip);
+        HBox.setHgrow(recent, Priority.ALWAYS);
+
+        HBox row = new HBox(10, zone, recent);
+        VBox.setVgrow(row, Priority.ALWAYS);
+        return card("Open", row);
     }
 
-    private static VBox card(String title, Node... body) {
-        Label t = new Label(title);
-        t.getStyleClass().add("card-title");
-        VBox c = new VBox(12, t);
-        c.getChildren().addAll(body);
-        c.getStyleClass().add("card");
-        c.setMaxWidth(720);
-        return c;
+    private static GroupBox card(String title, Node... body) {
+        GroupBox g = new GroupBox(title, body);
+        g.setSpacing(10);
+        return g;
     }
 
     private static Label value() {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.pvb.smperf.ui.GroupBox?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.NumberAxis?>
@@ -9,28 +10,15 @@
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.pvb.smperf.ui.ResultsViewController"
-            stylesheets="@style.css"
             styleClass="win-window">
 
-    <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="status-bar">
-            <padding>
-                <Insets top="10" right="16" bottom="10" left="16"/>
-            </padding>
-            <Label text="Benchmark Results &amp; Scaling" styleClass="section-heading"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="backBtn" text="← Back to Home" onAction="#goBack"/>
-        </HBox>
-    </top>
-
     <center>
-        <SplitPane orientation="VERTICAL" dividerPositions="0.40">
-            <!-- Chart card -->
-            <VBox spacing="8" styleClass="card">
-                <padding>
-                    <Insets top="12" right="12" bottom="12" left="12"/>
-                </padding>
-                <Label text="Speedup vs Threads" styleClass="card-title"/>
+        <SplitPane orientation="VERTICAL" dividerPositions="0.45" styleClass="plain-split">
+            <padding>
+                <Insets top="10" right="10" bottom="8" left="10"/>
+            </padding>
+
+            <GroupBox title="Speedup vs threads">
                 <LineChart fx:id="chart" animated="false" legendVisible="true" VBox.vgrow="ALWAYS">
                     <xAxis>
                         <NumberAxis label="Threads" forceZeroInRange="false"/>
@@ -39,14 +27,9 @@
                         <NumberAxis label="Speedup (×)"/>
                     </yAxis>
                 </LineChart>
-            </VBox>
+            </GroupBox>
 
-            <!-- Table card -->
-            <VBox spacing="8" styleClass="card">
-                <padding>
-                    <Insets top="12" right="12" bottom="12" left="12"/>
-                </padding>
-                <Label text="Detailed Runs" styleClass="card-title"/>
+            <GroupBox title="Detailed runs">
                 <TableView fx:id="table" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colThreads" text="Threads" prefWidth="70"/>
@@ -63,13 +46,8 @@
                         <TableColumn fx:id="colEff" text="Efficiency" prefWidth="90"/>
                     </columns>
                 </TableView>
-            </VBox>
+                <Label fx:id="summaryLbl" text="No results yet — run a benchmark first." styleClass="note"/>
+            </GroupBox>
         </SplitPane>
     </center>
-
-    <bottom>
-        <HBox styleClass="status-bar" alignment="CENTER_LEFT">
-            <Label fx:id="summaryLbl" text="No results yet — run a benchmark first." styleClass="muted"/>
-        </HBox>
-    </bottom>
 </BorderPane>

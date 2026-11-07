@@ -14,15 +14,15 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane prefHeight="560.0" prefWidth="900.0" styleClass="win-window" stylesheets="@specs_style.css" xmlns="http://javafx.com/javafx/21.0.6" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.pvb.smperf.ui.SpecsWindowController">
+<BorderPane styleClass="win-window" xmlns="http://javafx.com/javafx/21.0.6" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.pvb.smperf.ui.SpecsWindowController">
     <center>
         <HBox spacing="8">
             <padding>
-                <Insets bottom="6" left="10" right="10" top="10" />
+                <Insets bottom="8" left="10" right="10" top="10" />
             </padding>
 
             <!-- LEFT COLUMN -->
-            <VBox maxWidth="340" minWidth="310" prefWidth="330" spacing="6">
+            <VBox maxWidth="400" minWidth="320" prefWidth="360" spacing="6">
 
                 <!-- System group -->
                 <StackPane>
@@ -108,6 +108,7 @@
                         </columns>
                     </TableView>
                     <Label styleClass="note" text="Rows with the same shading are hardware threads of one physical core." wrapText="true" />
+                    <Label fx:id="statusLbl" styleClass="note" text="Detecting hardware…" wrapText="true" />
                 </VBox>
                 <Label styleClass="group-title" text="Logical processors" StackPane.alignment="TOP_LEFT">
                     <StackPane.margin>
@@ -117,14 +118,4 @@
             </StackPane>
         </HBox>
     </center>
-
-    <bottom>
-        <HBox alignment="CENTER_LEFT" spacing="8">
-            <padding>
-                <Insets bottom="10" left="10" right="10" top="4" />
-            </padding>
-            <Label fx:id="statusLbl" maxWidth="Infinity" styleClass="status-panel" text="Ready" HBox.hgrow="ALWAYS" />
-            <Button fx:id="closeBtn" minWidth="80" mnemonicParsing="false" styleClass="win-button" text="Close" />
-        </HBox>
-    </bottom>
 </BorderPane>

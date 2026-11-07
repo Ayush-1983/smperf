@@ -9,21 +9,18 @@ import com.pvb.smperf.model.RunConfig;
 import com.pvb.smperf.session.SavedConfig;
 import com.pvb.smperf.session.SessionService;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.io.File;
@@ -39,6 +36,7 @@ public class MainController {
     @FXML private MenuBar menuBar;
     @FXML private TextField binaryField;
     @FXML private TextArea argumentsField;
+    @FXML private TextArea logArea;
     @FXML private ComboBox<String> threadMode;
     @FXML private TextField threadField;
     @FXML private Spinner<Integer> repeats;
@@ -46,11 +44,12 @@ public class MainController {
     @FXML private TextField timeout;
     @FXML private Button runButton;
     @FXML private Button cancelButton;
-    @FXML private Button viewResultsBtn;
-    @FXML private Label status;
     @FXML private Label selectedInfo;
-    @FXML private Label machineSummaryLbl;
-    @FXML private Label footerStatus;
+    @FXML private Label mCpu;
+    @FXML private Label mCores;
+    @FXML private Label mMem;
+    @FXML private Label footerStatus;      // the one and only status line (bottom bar)
+    @FXML private ProgressBar runProgress;
 
     private EngineClient engine;
     private Task<Void> activeTask;
@@ -59,9 +58,11 @@ public class MainController {
     private final ObservableList<ConfigResult> resultData = FXCollections.observableArrayList();
     private EngineEvent.Result baseline;
 
-    // results view (loaded once, shown inside the shared window)
+    // results + topology views (loaded once, shown inside the shared window)
     private Parent resultsRoot;
     private ResultsViewController resultsController;
+    private Parent specsRoot;
+    private SpecsWindowController specsController;
 
     // shell: nav tabs + save/open feature
     private Workspace workspace;
@@ -81,25 +82,40 @@ public class MainController {
         threadMode.setOnAction(e ->
                 threadField.setDisable(!"Manual".equals(threadMode.getValue())));
 
-        argumentsField.setPromptText("--size 1000000\n--threads {threads}");
+        argumentsField.setPromptText("e.g.  --size  then  1000000  on the next line");
 
         loadResultsView();
+        loadSpecsView();
         buildWorkspace();
 
-        // "View Results" only appears once there is something to show and no run is in progress
-        viewResultsBtn.visibleProperty().bind(
-                Bindings.isNotEmpty(resultData).and(session.busy().not()));
-        viewResultsBtn.managedProperty().bind(viewResultsBtn.visibleProperty());
+        // the Results tab shows how many configurations it holds
+        resultData.addListener((ListChangeListener<ConfigResult>) c ->
+                workspace.setTabTitle("results",
+                        resultData.isEmpty() ? "Results" : "Results (" + resultData.size() + ")"));
 
         try {
             engine = new EngineClient(EngineLocator.find());
             loadMachineAsync();
         } catch (Exception ex) {
-            status.setText("Engine unavailable");
-            footerStatus.setText("Engine unavailable");
+            setStatus("Engine unavailable");
             runButton.setDisable(true);
-            machineSummaryLbl.setText("Engine not found — topology unavailable");
+            mCpu.setText("Engine not found");
+            mCores.setText("-");
+            mMem.setText("-");
+            specsController.showMessage("Engine not found", "Topology unavailable");
         }
+    }
+
+    private static final java.time.format.DateTimeFormatter CLOCK =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    private void log(String line) {
+        logArea.appendText("[" + java.time.LocalTime.now().format(CLOCK) + "] " + line + "\n");
+    }
+
+    /** Single place that writes the status bar. */
+    private void setStatus(String text) {
+        footerStatus.setText(text);
     }
 
     // ------------------------------------------------------------------
@@ -111,10 +127,21 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/pvb/smperf/ui/results_view.fxml"));
             resultsRoot = loader.load();
             resultsController = loader.getController();
-            resultsController.setOnBack(() -> workspace.show("home"));
         } catch (Exception e) {
             e.printStackTrace();
             resultsRoot = new Label("Failed to load results view");
+        }
+    }
+
+    private void loadSpecsView() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/pvb/smperf/ui/specs_window.fxml"));
+            specsRoot = loader.load();
+            specsController = loader.getController();
+            specsController.showMessage("Detecting…", "Detecting hardware…");
+        } catch (Exception e) {
+            e.printStackTrace();
+            specsRoot = new Label("Failed to load topology view");
         }
     }
 
@@ -131,19 +158,15 @@ public class MainController {
                 () -> {                      // runs every time the tab is opened
                     if (resultsController != null) resultsController.setResults(resultData);
                 }));
+        workspace.register(new Workspace.View("topology", "Topology", () -> specsRoot));
         workspace.register(new Workspace.View("session", "Session",
                 () -> new SessionView(session, sessionActions)));
 
         sessionActions.install(menuBar);          // File / Edit items
-        workspace.installViewMenu(menuBar);       // Home / Results / Session  (Ctrl+1..3)
+        workspace.installShortcuts();             // Ctrl+1..4 switch tabs (no duplicate menu entries)
         sessionActions.installDropTarget(root);   // drop a .json/.csv anywhere to open it
 
         workspace.show("home");
-    }
-
-    @FXML
-    private void showResultsView() {
-        workspace.show("results");
     }
 
     // ------------------------------------------------------------------
@@ -185,8 +208,12 @@ public class MainController {
         session.beginLive(cachedMachineInfo, lastSavedConfig);
 
         setRunning(true);
-        status.setText("Benchmark initializing…");
-        footerStatus.setText("Running…");
+        setStatus("Benchmark initializing…");
+        logArea.clear();
+        log("Target   " + config.binary().getFileName()
+                + (config.argsTemplate().isEmpty() ? "" : "  " + String.join(" ", config.argsTemplate())));
+        log("Threads  " + (config.threads().isEmpty() ? "automatic" : config.threads().toString())
+                + "   ·   " + config.repeats() + " repetitions, " + config.warmup() + " warmup");
 
         activeTask = new Task<>() {
             @Override
@@ -198,22 +225,21 @@ public class MainController {
 
         activeTask.setOnSucceeded(e -> {
             setRunning(false);
-            status.setText("Benchmark finished");
-            footerStatus.setText("Finished · " + resultData.size() + " configurations");
+            setStatus("Finished · " + resultData.size() + (resultData.size() == 1 ? " configuration" : " configurations"));
             activeTask = null;
         });
         activeTask.setOnFailed(e -> {
             Throwable error = activeTask.getException();
             setRunning(false);
-            status.setText("Benchmark failed");
-            footerStatus.setText("Failed");
-            showAlert("Engine error", error == null ? "Unknown error" : error.getMessage());
+            setStatus("Benchmark failed");
+            String why = error == null ? "Unknown error" : error.getMessage();
+            log("FAILED: " + why);
+            showAlert("Engine error", why);
             activeTask = null;
         });
         activeTask.setOnCancelled(e -> {
             setRunning(false);
-            status.setText("Benchmark cancelled");
-            footerStatus.setText("Cancelled");
+            setStatus("Benchmark cancelled");
             activeTask = null;
         });
 
@@ -225,75 +251,27 @@ public class MainController {
     @FXML
     private void cancelBenchmark() {
         if (engine == null || activeTask == null) return;
-        status.setText("Cancellation requested…");
+        setStatus("Cancellation requested…");
         cancelButton.setDisable(true);
         engine.cancel();
     }
 
-    @FXML
-    private void showSpecsWindow() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/pvb/smperf/ui/specs_window.fxml"));
-            Parent rootNode = loader.load();
-            SpecsWindowController controller = loader.getController();
-            if (cachedMachineInfo != null) {
-                controller.populate(cachedMachineInfo);
-            }
-
-            Stage mainStage = (Stage) root.getScene().getWindow();
-            final boolean wasMaximized = mainStage.isMaximized();
-
-            Stage specStage = new Stage();
-
-            // Critical: do NOT use APPLICATION_MODAL and be careful with owner
-            specStage.initModality(Modality.WINDOW_MODAL);
-            specStage.initOwner(mainStage);          // keep this for proper modality
-            specStage.setTitle("System Topology & Architecture Specs");
-            specStage.setScene(new Scene(rootNode, 920, 580));
-            specStage.setResizable(true);
-
-            // Protect against the minimise / de-maximise bug
-            ChangeListener<Boolean> maximisedGuard = (obs, oldVal, newVal) -> {
-                if (wasMaximized && !newVal && specStage.isShowing()) {
-                    Platform.runLater(() -> mainStage.setMaximized(true));
-                }
-            };
-            mainStage.maximizedProperty().addListener(maximisedGuard);
-
-            specStage.setOnHidden(e -> {
-                mainStage.maximizedProperty().removeListener(maximisedGuard);
-                if (wasMaximized) {
-                    mainStage.setMaximized(true);
-                }
-                mainStage.toFront();
-                mainStage.requestFocus();
-            });
-
-            // Extra safety on some Linux WMs
-            specStage.setOnShown(e -> {
-                if (wasMaximized) {
-                    Platform.runLater(() -> {
-                        if (!mainStage.isMaximized()) {
-                            mainStage.setMaximized(true);
-                        }
-                    });
-                }
-            });
-
-            specStage.showAndWait();
-
-        } catch (Exception ex) {
-            showAlert("UI Error", "Could not load specs window: " + ex.getMessage());
-        }
-    }
-
+    /**
+     * About box, drawn INSIDE the window. (A separate Alert/Stage made some window managers
+     * minimise or un-maximise the main window; nothing here opens a second window.)
+     */
     @FXML
     private void showAboutDialog() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About SMPerf");
-        alert.setHeaderText("SMPerf CPU Performance & Scaling Analyzer");
-        alert.setContentText("Version 1.0.0\nA clean desktop utility for multi-threaded benchmark profiling.");
-        alert.showAndWait();
+        Label name = new Label("SMPerf 1.0");
+        name.getStyleClass().add("about-name");
+        Label what = new Label("CPU Performance & Scaling Analyzer");
+        Label how = new Label("Runs a program at several thread counts, pins every run to specific CPUs "
+                + "and shows wall time, speedup and efficiency. All measuring is done by the native "
+                + "mperf engine; this window only draws the results.");
+        how.setWrapText(true);
+        how.setMaxWidth(360);
+        how.getStyleClass().add("muted");
+        workspace.showDialog("About SMPerf", new VBox(6, name, what, how));
     }
 
     @FXML
@@ -315,8 +293,12 @@ public class MainController {
         task.setOnSucceeded(e -> {
             cachedMachineInfo = task.getValue();
             updateMachineSummary(cachedMachineInfo);
+            specsController.populate(cachedMachineInfo);
         });
-        task.setOnFailed(e -> machineSummaryLbl.setText("Could not detect machine topology"));
+        task.setOnFailed(e -> {
+            mCpu.setText("Could not detect topology");
+            specsController.showMessage("Could not detect topology", "Detection failed");
+        });
         Thread t = new Thread(task, "machine-loader");
         t.setDaemon(true);
         t.start();
@@ -325,9 +307,12 @@ public class MainController {
     private void updateMachineSummary(MachineInfo m) {
         if (m == null) return;
         double gib = m.ramBytes() / (1024.0 * 1024 * 1024);
-        machineSummaryLbl.setText(String.format(Locale.ROOT,
-                "%s  ·  %d cores / %d threads  ·  %.1f GiB RAM",
-                m.model(), m.physicalCount(), m.logicalCount(), gib));
+        long p = m.cpus().stream().filter(c -> "performance".equals(c.type())).map(MachineInfo.Cpu::physicalCore).distinct().count();
+        long eff = m.cpus().stream().filter(c -> "efficiency".equals(c.type())).map(MachineInfo.Cpu::physicalCore).distinct().count();
+        String mix = (p > 0 && eff > 0) ? String.format(Locale.ROOT, "  (%d P + %d E)", p, eff) : "";
+        mCpu.setText(m.model());
+        mCores.setText(String.format(Locale.ROOT, "%d%s / %d threads", m.physicalCount(), mix, m.logicalCount()));
+        mMem.setText(String.format(Locale.ROOT, "%.1f GiB", gib));
     }
 
     private RunConfig createConfig() {
@@ -381,14 +366,19 @@ public class MainController {
                 result = ConfigResult.of(r, baseline);
             }
             resultData.add(result);
-            status.setText(String.format(Locale.ROOT, "%d threads completed · %d/%d successful",
+            setStatus(String.format(Locale.ROOT, "%d threads completed · %d/%d successful",
                     r.threads(), r.runs() - r.failed(), r.runs()));
+            log(String.format(Locale.ROOT, "%3d threads   %d/%d ok   best %.4f s   mean %.4f s   speedup %s",
+                    r.threads(), r.runs() - r.failed(), r.runs(), r.wallBest(), r.wallMean(),
+                    Double.isNaN(result.speedup()) ? "—" : String.format(Locale.ROOT, "%.2f×", result.speedup())));
         } else if (event instanceof EngineEvent.Failure f) {
-            status.setText("Error at " + f.threads() + " threads: " + f.message());
+            setStatus("Error at " + f.threads() + " threads: " + f.message());
+            log("ERROR at " + f.threads() + " threads: " + f.message());
         } else if (event instanceof EngineEvent.Done d) {
-            if (d.cancelled()) status.setText("Benchmark cancelled");
-            else if (d.ok()) status.setText("All configurations completed");
-            else status.setText("Benchmark terminated with errors");
+            String end = d.cancelled() ? "Benchmark cancelled"
+                    : d.ok() ? "All configurations completed" : "Benchmark terminated with errors";
+            setStatus(end);
+            log(end);
         }
     }
 
@@ -396,6 +386,8 @@ public class MainController {
         session.busy().set(running);   // disables open/save/clear while the engine is working
         runButton.setDisable(running);
         cancelButton.setDisable(!running);
+        runProgress.setVisible(running);
+        runProgress.setManaged(running);
         binaryField.setDisable(running);
         argumentsField.setDisable(running);
         threadMode.setDisable(running);

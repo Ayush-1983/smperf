@@ -11,6 +11,7 @@ module com.pvb.smperf {
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.bootstrapfx.core;
     requires eu.hansolo.tilesfx;
+    requires java.prefs;
 
     opens com.pvb.smperf to javafx.fxml;
     opens com.pvb.smperf.ui to javafx.fxml;

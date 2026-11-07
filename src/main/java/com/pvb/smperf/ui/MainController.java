@@ -6,13 +6,17 @@ import com.pvb.smperf.engine.EngineLocator;
 import com.pvb.smperf.model.ConfigResult;
 import com.pvb.smperf.model.MachineInfo;
 import com.pvb.smperf.model.RunConfig;
+import com.pvb.smperf.session.SavedConfig;
+import com.pvb.smperf.session.SessionService;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -32,6 +36,7 @@ import java.util.Locale;
 public class MainController {
 
     @FXML private BorderPane root;
+    @FXML private MenuBar menuBar;
     @FXML private TextField binaryField;
     @FXML private TextArea argumentsField;
     @FXML private ComboBox<String> threadMode;
@@ -54,9 +59,15 @@ public class MainController {
     private final ObservableList<ConfigResult> resultData = FXCollections.observableArrayList();
     private EngineEvent.Result baseline;
 
-    private Parent homeRoot;          // the main.fxml content
+    // results view (loaded once, shown inside the shared window)
     private Parent resultsRoot;
     private ResultsViewController resultsController;
+
+    // shell: nav tabs + save/open feature
+    private Workspace workspace;
+    private SessionService session;
+    private SessionActions sessionActions;
+    private SavedConfig lastSavedConfig;   // snapshot of the config of the run in progress
 
     @FXML
     private void initialize() {
@@ -72,9 +83,13 @@ public class MainController {
 
         argumentsField.setPromptText("--size 1000000\n--threads {threads}");
 
-        homeRoot = root;   // currently showing home
-
         loadResultsView();
+        buildWorkspace();
+
+        // "View Results" only appears once there is something to show and no run is in progress
+        viewResultsBtn.visibleProperty().bind(
+                Bindings.isNotEmpty(resultData).and(session.busy().not()));
+        viewResultsBtn.managedProperty().bind(viewResultsBtn.visibleProperty());
 
         try {
             engine = new EngineClient(EngineLocator.find());
@@ -88,7 +103,7 @@ public class MainController {
     }
 
     // ------------------------------------------------------------------
-    // Navigation
+    // Navigation (all views live in the same window / same scene)
     // ------------------------------------------------------------------
 
     private void loadResultsView() {
@@ -96,23 +111,39 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/pvb/smperf/ui/results_view.fxml"));
             resultsRoot = loader.load();
             resultsController = loader.getController();
-            resultsController.setOnBack(this::showHomeView);
+            resultsController.setOnBack(() -> workspace.show("home"));
         } catch (Exception e) {
             e.printStackTrace();
             resultsRoot = new Label("Failed to load results view");
         }
     }
 
-    @FXML
-    private void showResultsView() {
-        resultsController.setResults(resultData);   // even if empty → shows empty state
-        Stage stage = (Stage) root.getScene().getWindow();
-        stage.getScene().setRoot(resultsRoot);
+    private void buildWorkspace() {
+        Node homeNode = root.getCenter();   // capture BEFORE Workspace takes over the center
+
+        session = new SessionService(resultData);
+        workspace = new Workspace(root);
+        sessionActions = new SessionActions(session, workspace);
+
+        workspace.register(new Workspace.View("home", "Home", () -> homeNode));
+        workspace.register(new Workspace.View("results", "Results",
+                () -> resultsRoot,
+                () -> {                      // runs every time the tab is opened
+                    if (resultsController != null) resultsController.setResults(resultData);
+                }));
+        workspace.register(new Workspace.View("session", "Session",
+                () -> new SessionView(session, sessionActions)));
+
+        sessionActions.install(menuBar);          // File / Edit items
+        workspace.installViewMenu(menuBar);       // Home / Results / Session  (Ctrl+1..3)
+        sessionActions.installDropTarget(root);   // drop a .json/.csv anywhere to open it
+
+        workspace.show("home");
     }
 
-    private void showHomeView() {
-        Stage stage = (Stage) resultsRoot.getScene().getWindow();
-        stage.getScene().setRoot(homeRoot);
+    @FXML
+    private void showResultsView() {
+        workspace.show("results");
     }
 
     // ------------------------------------------------------------------
@@ -151,6 +182,7 @@ public class MainController {
         resultData.clear();
         baseline = null;
         if (resultsController != null) resultsController.clear();
+        session.beginLive(cachedMachineInfo, lastSavedConfig);
 
         setRunning(true);
         status.setText("Benchmark initializing…");
@@ -197,6 +229,7 @@ public class MainController {
         cancelButton.setDisable(true);
         engine.cancel();
     }
+
     @FXML
     private void showSpecsWindow() {
         try {
@@ -333,6 +366,10 @@ public class MainController {
             throw new IllegalArgumentException("Invalid timeout value.");
         }
 
+        // snapshot for the session file (empty thread list = automatic)
+        lastSavedConfig = new SavedConfig(binary.toString(), List.copyOf(args), List.copyOf(threads),
+                repeats.getValue(), warmup.getValue(), timeoutValue);
+
         return new RunConfig(binary, args, threads, repeats.getValue(), warmup.getValue(), timeoutValue);
     }
 
@@ -356,6 +393,7 @@ public class MainController {
     }
 
     private void setRunning(boolean running) {
+        session.busy().set(running);   // disables open/save/clear while the engine is working
         runButton.setDisable(running);
         cancelButton.setDisable(!running);
         binaryField.setDisable(running);
@@ -367,11 +405,8 @@ public class MainController {
         timeout.setDisable(running);
     }
 
+    /** Errors now show in the in-window message bar instead of a pop-up dialog. */
     private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.show();
+        workspace.error(title + ": " + message);
     }
 }

@@ -90,11 +90,21 @@ fi
 [ -f "$DEST/$MARKER" ] || fail "Copying failed (disk full or no permission?)."
 chmod +x "$DEST/bin/smperf" "$DEST/bin/mperf"
 
-# ---- 5. menu entry
-APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-mkdir -p "$APPS"
-DESKTOP_FILE="$APPS/smperf.desktop"
-cat > "$DESKTOP_FILE" <<EOF
+# ---- 5. menu entry / Applications link
+if [ "$(uname -s)" = "Darwin" ]; then
+    xattr -cr "$DEST" 2>/dev/null || true
+    APP_BUNDLE_PATH="$DEST/lib/SMPerf.app"
+    [ -d "$APP_BUNDLE_PATH" ] || APP_BUNDLE_PATH="$DEST/SMPerf.app"
+    if [ -d "$APP_BUNDLE_PATH" ] && yesno "Add SMPerf.app to $HOME/Applications (for Launchpad / Spotlight)?"; then
+        mkdir -p "$HOME/Applications"
+        rm -rf "$HOME/Applications/SMPerf.app"
+        ln -s "$APP_BUNDLE_PATH" "$HOME/Applications/SMPerf.app"
+    fi
+else
+    APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    mkdir -p "$APPS"
+    DESKTOP_FILE="$APPS/smperf.desktop"
+    cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Type=Application
 Name=SMPerf
@@ -104,16 +114,17 @@ Icon=$DEST/icon.png
 Terminal=false
 Categories=Development;Utility;System;
 EOF
-chmod 644 "$DESKTOP_FILE"
-update-desktop-database "$APPS" >/dev/null 2>&1 || true
+    chmod 644 "$DESKTOP_FILE"
+    update-desktop-database "$APPS" >/dev/null 2>&1 || true
 
-# ---- 6. optional desktop shortcut
-if yesno "Create a desktop shortcut?"; then
-    DESK="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
-    if [ -d "$DESK" ]; then
-        cp "$DESKTOP_FILE" "$DESK/SMPerf.desktop"
-        chmod +x "$DESK/SMPerf.desktop"
-        gio set "$DESK/SMPerf.desktop" metadata::trusted true >/dev/null 2>&1 || true
+    # ---- 6. optional desktop shortcut
+    if yesno "Create a desktop shortcut?"; then
+        DESK="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")"
+        if [ -d "$DESK" ]; then
+            cp "$DESKTOP_FILE" "$DESK/SMPerf.desktop"
+            chmod +x "$DESK/SMPerf.desktop"
+            gio set "$DESK/SMPerf.desktop" metadata::trusted true >/dev/null 2>&1 || true
+        fi
     fi
 fi
 

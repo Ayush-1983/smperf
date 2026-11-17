@@ -43,8 +43,10 @@ public final class EngineLocator {
         if (appDir != null) {
             candidates.add(appDir.resolve(engineName()));
             Path p = appDir;
-            for (int i = 0; i < 4 && p != null; i++, p = p.getParent())
+            for (int i = 0; i < 4 && p != null; i++, p = p.getParent()) {
                 candidates.add(p.resolve("bin").resolve(engineName()));
+                candidates.add(p.resolve("MacOS").resolve(engineName())); // macOS .app bundle Contents/MacOS/mperf
+            }
         }
 
         for (Path p : candidates) {
